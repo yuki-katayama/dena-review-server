@@ -1,11 +1,19 @@
 import mongoose from "mongoose";
 import { UserRoomModel, RoleModel, User, UserModel } from "./models";
 import { v4 as uuidv4 } from "uuid";
-
+import { DEFAULT_MONGODB_URI } from "./constants";
+import 'dotenv/config'
 
 export async function initDenadb() {
 	mongoose.Promise = global.Promise;
-	await mongoose.connect("mongodb://localhost:27017/denadb");
+
+	if (process.env.MONGODB_URI) {
+		await mongoose.connect(process.env.MONGODB_URI, {
+			dbName: 'denadb',
+		})
+	} else {
+		await mongoose.connect(DEFAULT_MONGODB_URI)
+	}
 	await createInitialDB();
   }
 
