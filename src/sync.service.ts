@@ -74,18 +74,13 @@ export async function initSyncService(server: ServerHttp) {
         })
 
         s.on('leave room', async () => {
-            const states = await UserRoomModel.find().lean().exec();
-            const state = await UserRoomModel.findOne({socketId: s.id}).exec();
-            if (state) {
-                const room = await RoomModel.findOne({id: state.roomId}).exec();
-                const userNumInRoom: number = states.filter((s) => s.roomId === state!.roomId).length
-                if (userNumInRoom == 1) {
-                    await RoomModel.deleteOne({id: state.roomId});
-                }
-                await UserRoomModel.deleteOne({socketId: s.id});
-                io.to(state.roomName).emit("user leave room", userNumInRoom)
-                await notifyRoomState(io)
-            }
+            console.log("leave room")
+            await leaveOrDisconnect(io, s.id);
+        })
+
+        s.on('disconnect', async () => {
+            console.log("disconnect");
+            await leaveOrDisconnect(io, s.id);
         })
 
         s.on('get room state', async () => {
@@ -99,6 +94,21 @@ async function addRoom(roomName: string): Promise<void> {
     let room = await RoomModel.findOne({name: roomName}).exec();
     if (!room) {
         await RoomModel.create({id: v4(), name: roomName});
+    }
+}
+
+async function leaveOrDisconnect(io: Server, socketId: string): Promise<void> {
+    const states = await UserRoomModel.find().lean().exec();
+    const state = await UserRoomModel.findOne({socketId: socketId}).exec();
+    if (state) {
+        const room = await RoomModel.findOne({id: state.roomId}).exec();
+        const userNumInRoom: number = states.filter((s) => s.roomId === state!.roomId).length
+        if (userNumInRoom == 1) {
+            await RoomModel.deleteOne({id: state.roomId});
+        }
+        await UserRoomModel.deleteOne({socketId: socketId});
+        io.to(state.roomName).emit("user leave room", userNumInRoom)
+        await notifyRoomState(io)
     }
 }
 
