@@ -57,6 +57,14 @@ export async function initSyncService(server: ServerHttp) {
             io.to(ur.roomName).emit("user put coin", position);
         })
 
+        s.on('reset', async () => {
+            const ur = await UserRoomModel.findOne({ socketId: s.id }).exec()
+            if (!ur) {
+                return ;
+            }
+            io.to(ur.roomName).emit("user reset");
+        })
+
         s.on('finish', async () => {
             const ur = await UserRoomModel.findOne({ socketId: s.id }).exec()
             if (!ur) {
