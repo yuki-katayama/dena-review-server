@@ -21,7 +21,6 @@ export async function initSyncService(server: ServerHttp) {
         s.on('add room', async (roomName: string) => {
             await addRoom(roomName);
             const room = await RoomModel.findOne({ name: roomName }).exec();
-            await UserRoomModel.create({id: v4(), userId: socketToUserId[s.id], roomName: roomName, roomId: room!.id, socketId: s.id});
             console.log("addRoom: ", roomName)
             await notifyRoomState(io)
         });
@@ -35,11 +34,13 @@ export async function initSyncService(server: ServerHttp) {
                 s.emit("not found room")
                 return;
             }
-            const ur = await UserRoomModel.findOne({ roomName: roomName }).exec()
-            if (ur) {
+            const ur = await UserRoomModel.find({ roomName: roomName }).exec()
+            if (ur.length === 0) {
+                await UserRoomModel.create({id: v4(), roomId: room.id, userId: socketToUserId[s.id], socketId: s.id, roomName: roomName});
+            } else {
                 secondUser = true
+                await UserRoomModel.create({id: v4(), roomId: room.id, userId: socketToUserId[s.id], socketId: s.id, roomName: roomName});
             }
-            await UserRoomModel.create({id: v4(), roomId: room.id, userId: socketToUserId[s.id], socketId: s.id, roomName: roomName});
             let userRooms = await UserRoomModel.find().lean().exec();
             s.join(roomName)
             io.to(roomName).emit("user join room", userRooms);
